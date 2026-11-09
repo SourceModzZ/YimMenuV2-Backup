@@ -63,13 +63,30 @@ jobs:
         run: cmake --build ./build --config RelWithDebInfo --target YimMenuV2 --
 
       - name: Check if DLL got built
-        run: if [ ! -f build/libYimMenuV2.dll ]; then exit 1; fi
+        run: |
+          echo "Build directory contents:"
+          ls -la build/
+          if [ -f build/libYimMenuV2.dll ]; then
+            DLL_PATH=build/libYimMenuV2.dll
+          elif [ -f build/YimMenuV2.dll ]; then
+            DLL_PATH=build/YimMenuV2.dll
+          else
+            echo "ERROR: Neither libYimMenuV2.dll nor YimMenuV2.dll was found in build/"
+            exit 1
+          fi
+          echo "Found DLL at: $DLL_PATH"
+          echo "DLL_PATH=$DLL_PATH" >> "$GITHUB_ENV"
 
       - name: Rename DLL to libYimMenuV2-dev-{GITHUB_SHA}.dll
         run: |
-          mv libYimMenuV2.dll libYimMenuV2-dev-${{github.sha}}.dll
-          mv libYimMenuV2.pdb libYimMenuV2-dev-${{github.sha}}.pdb
-        working-directory: build/
+          mv "$DLL_PATH" "build/libYimMenuV2-dev-${{ github.sha }}.dll"
+          if [ -f build/libYimMenuV2.pdb ]; then
+            mv build/libYimMenuV2.pdb "build/libYimMenuV2-dev-${{ github.sha }}.pdb"
+          elif [ -f build/YimMenuV2.pdb ]; then
+            mv build/YimMenuV2.pdb "build/libYimMenuV2-dev-${{ github.sha }}.pdb"
+          else
+            echo "No PDB file found (optional, continuing)"
+          fi
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -78,3 +95,4 @@ jobs:
           path: |
             build/libYimMenuV2-dev-*.dll
             build/libYimMenuV2-dev-*.pdb
+          if-no-files-found: error

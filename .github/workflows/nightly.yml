@@ -5,10 +5,20 @@ on:
     # cronjob that triggers every day at 2PM UTC
     - cron: "0 14 * * *"
   workflow_dispatch:
+  # Register this workflow in the Actions UI (schedule/dispatch-only
+  # workflows are sometimes invisible until a push touches the file)
+  push:
+    paths:
+      - ".github/workflows/nightly.yml"
 
 concurrency:
   group: nightly
   cancel-in-progress: true
+
+# Needed to delete/create the nightly tag + release assets
+permissions:
+  contents: write
+  actions: read
 
 jobs:
   check_recent_commit:
@@ -74,6 +84,9 @@ jobs:
     name: Recreate Release
     needs: build_nightly
     if: needs.check_recent_commit.outputs.should_run == 'true'
+    permissions:
+      contents: write
+      actions: read
     steps:
       - uses: actions/checkout@v4
 
